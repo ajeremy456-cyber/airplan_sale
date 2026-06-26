@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>促銷機票彙總</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen">
+
+  <!-- 頁首 -->
+  <header class="bg-indigo-600 text-white shadow">
+    <div class="max-w-6xl mx-auto px-4 py-5 flex items-center justify-between">
+      <h1 class="text-2xl font-bold flex items-center gap-2">
+        ✈️ 促銷機票彙總
+      </h1>
+      <button
+        id="btn-reload"
+        class="bg-white text-indigo-600 font-semibold px-4 py-2 rounded-lg hover:bg-indigo-50 transition text-sm"
+        onclick="fetchPromotions()"
+      >
+        重新整理
+      </button>
+    </div>
+  </header>
+
+  <!-- 主體 -->
+  <main class="max-w-6xl mx-auto px-4 py-8">
+
+    <!-- API 狀態資訊列 -->
+    <div id="api-info" class="mb-4 text-sm text-gray-500"></div>
+
+    <!-- Loading 狀態 -->
+    <div id="loading" class="flex flex-col items-center justify-center py-20 hidden">
+      <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
+      <p class="text-gray-500 text-lg">讀取促銷資訊中…</p>
+    </div>
+
+    <!-- 錯誤訊息 -->
+    <div id="error-panel" class="hidden bg-red-50 border border-red-300 rounded-xl p-6 mb-6">
+      <div class="flex items-start gap-3">
+        <span class="text-3xl">⚠️</span>
+        <div class="flex-1">
+          <h2 class="text-red-700 font-bold text-lg mb-1">讀取失敗</h2>
+          <p id="error-message" class="text-red-600 text-sm mb-2"></p>
+          <p id="error-hint" class="text-red-400 text-xs mb-3"></p>
+          <button
+            class="bg-red-600 text-white px-4 py-1.5 rounded-md text-sm hover:bg-red-700 transition"
+            onclick="fetchPromotions()"
+          >
+            重新嘗試
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 卡片列表 -->
+    <div id="cards-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 hidden">
+      <!-- JS 動態填入 -->
+    </div>
+
+    <!-- 無資料 -->
+    <div id="empty-state" class="hidden flex flex-col items-center justify-center py-20">
+      <span class="text-5xl mb-4">🛫</span>
+      <p class="text-gray-500 text-lg">目前沒有促銷資訊</p>
+    </div>
+
+  </main>
+
+  <footer class="text-center text-gray-400 text-xs py-6">
+    促銷機票彙總系統 &copy; 2026 · 資料來源：各航空公司官網
+  </footer>
+
+  <script>
+    // ── DOM 元素 ────────────────────────────────────────────
+    const elLoading     = document.getElementById('loading');
+    const elError      = document.getElementById('error-panel');
+    const elErrorMsg   = document.getElementById('error-message');
+    const elErrorHint = document.getElementById('error-hint');
+    const elCards      = document.getElementById('cards-container');
+    const elEmpty     = document.getElementById('empty-state');
+    const elApiInfo    = document.getElementById('api-info');
+    const elBtnReload  = document.getElementById('btn-reload');
+
+    // ── 狀態切換 ────────────────────────────────────────────
+    function showLoading() {
+      elLoading.classList.remove('hidden');
+      elError.classList.add('hidden');
+      elCards.classList.add('hidden');
+      elEmpty.classList.add('hidden');
+    }
+    function showError(msg, hint) {
+      elLoading.classList.add('hidden');
+      elError.classList.remove('hidden');
+      elCards.classList.add('hidden');
+      elEmpty.classList.add('hidden');
+      elErrorMsg.textContent   = msg;
+      elErrorHint.textContent = hint || '';
+    }
+    function showCards(items) {
+      elLoading.classList.add('hidden');
+      elError.classList.add('hidden');
+      elCards.classList.remove('hidden');
+      elEmpty.classList.add('hidden');
+      renderCards(items);
+    }
+    function showEmpty() {
+      elLoading.classList.add('hidden');
+      elError.classList.add('hidden');
+      elCards.classList.add('hidden');
+      elEmpty.classList.remove('hidden');
+    }
+
+    // ── 卡片渲染 ────────────────────────────────────────────
+    function renderCards(items) {
+      elCards.innerHTML = '';
+      items.forEach(item => {
+        const card = document.createElement('a');
+        card.href   = item.url;
+        card.target = '_blank';
+        card.rel    = 'noopener noreferrer';
+        card.className = `
+          group bg-white rounded-2xl shadow-sm hover:shadow-xl
+          border border-gray-200 hover:border-indigo-300
+          transition-all duration-200 flex flex-col
+          overflow-hidden
+        `;
+
+        // 標題區（航空公司 + 標題）
+        const headerBg = 'bg-indigo-600';
+        card.innerHTML = `
+${item.image_url 
+            ? `<div class="w-full h-48 overflow-hidden bg-gray-100">
+                 <img src="${item.image_url}" alt="${escapeHtml(item.title)}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+               </div>` 
+            : ''
+          }
+          
+          <div class="bg-indigo-600 px-5 py-4">
+            <p class="text-indigo-200 text-xs font-medium uppercase tracking-wide">
+              ${escapeHtml(item.airline)}
+            </p>
+            <h3 class="text-white font-semibold text-base leading-snug mt-1 group-hover:text-yellow-200 transition">
+              ${escapeHtml(item.title)}
+            </h3>
+          </div>
+          <!-- 
+            <div class="flex-1 px-5 py-4 flex flex-col gap-2">
+            ${priceBlock(item)}
+            ${infoRow('📍 出發', item.origin)}
+            ${infoRow('🏁 目的地', item.destination)}
+            ${infoRow('🗓 旅遊期間', item.travel_period)}
+            ${infoRow('🎟 開票期間', item.booking_period)}
+            </div> 
+          -->
+          <div class="px-5 pb-4">
+            <span class="inline-block bg-indigo-50 text-indigo-600 text-xs font-medium px-3 py-1 rounded-full group-hover:bg-indigo-600 group-hover:text-white transition">
+              點擊前往官網 →
+            </span>
+            <span class="block text-gray-400 text-[10px] mt-2">
+              更新：${item.updated_at ? item.updated_at.replace('T', ' ').slice(0, 16) : '—'}
+            </span>
+          </div>
+        
+        `;
+        elCards.appendChild(card);
+      });
+    }
+
+    function priceBlock(item) {
+      if (item.price != null) {
+        return `
+          <div class="flex items-baseline gap-1">
+            <span class="text-2xl font-extrabold text-indigo-700">$${item.price.toLocaleString()}</span>
+            <span class="text-gray-400 text-sm">${item.currency}</span>
+            <span class="text-gray-400 text-xs">起</span>
+          </div>`;
+      }
+      return `<div class="text-gray-400 text-sm">票價請至官網查詢</div>`;
+    }
+
+    function infoRow(label, value) {
+      if (!value || value === '不明' || value === '請至官網確認') {
+        return `<div class="flex items-start gap-1 text-xs text-gray-400">
+          <span>${label.split(' ')[0]}</span>
+          <span>${label.split(' ').slice(1).join(' ')}：—</span>
+        </div>`;
+      }
+      return `<div class="flex items-start gap-1 text-sm text-gray-700">
+        <span class="flex-shrink-0">${label}</span>
+        <span>${escapeHtml(value)}</span>
+      </div>`;
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    // ── 核心 fetch ──────────────────────────────────────────
+    async function fetchPromotions() {
+      showLoading();
+      elBtnReload.disabled = true;
+
+      try {
+        const resp = await fetch('http://127.0.0.1:8000/api/promotions');
+        const data = await resp.json();
+
+        // 爬蟲失敗（API 回 502/500 並附錯誤 JSON）
+        if (!resp.ok && data.error) {
+          // 嘗試使用 API 附帶的 demo_data 降級顯示
+          const fallbackItems = data.demo_data;
+          const msg = data.message || data.error;
+          const hint = data.hint || '';
+          if (fallbackItems && fallbackItems.length > 0) {
+            elApiInfo.textContent = `⚠️ 爬蟲異常（${data.source || '未知'}），已自動降級顯示 Demo 資料`;
+            showCards(fallbackItems);
+          } else {
+            showError(msg, hint);
+          }
+          return;
+        }
+
+        // 正常成功
+        if (Array.isArray(data)) {
+          elApiInfo.textContent = `✅ 已取得 ${data.length} 筆促銷資料（${new Date().toLocaleTimeString()}）`;
+          if (data.length === 0) {
+            showEmpty();
+          } else {
+            showCards(data);
+          }
+        } else {
+          showError('API 回傳格式異常', '預期回傳 Array，請檢查後端');
+        }
+
+      } catch (err) {
+        // 網路錯誤、CORS 阻擋、伺服器未啟動
+        showError(
+          '無法連線至 API 伺服器。請確認後端已啟動（python main.py）且運行於 http://127.0.0.1:8000 。',
+          `技術細節：${err.message}`
+        );
+      } finally {
+        elBtnReload.disabled = false;
+      }
+    }
+
+    // ── 啟動 ────────────────────────────────────────────────
+    fetchPromotions();
+  </script>
+
+</body>
+</html>
