@@ -8,7 +8,9 @@ from pydantic import BaseModel
 import requests
 import json
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
+#華航新增的套件
+import re
+from typing import List                                 
 
 
 logger = logging.getLogger("promo_scraper")
@@ -115,7 +117,7 @@ def fetch_page_title(url: str, headers: dict) -> str:
         logger.warning(f"⚠️ 抓標題失敗 {url}: {e}")
 
     return ""
-
+#虎航爬蟲
 def get_tigerair_promotions() -> List[Promotion]:
     """台灣虎航爬蟲 - Banner 大圖 + 並行抓標題"""
     try:
@@ -196,4 +198,76 @@ def get_tigerair_promotions() -> List[Promotion]:
 
     except Exception as e:
         logger.error(f"❌ [Tigerair] API 抓取失敗: {e}", exc_info=True)
+        return []
+#中華航空爬蟲
+def get_china_airlines() -> List[Promotion]:
+    """中華航空爬蟲 - 首頁 Banner 圖片 + 標題 + 連結"""
+    try:
+        logger.info("🚀 [ChinaAir] 抓取首頁 Banner！")
+        now = datetime.now().isoformat(timespec="seconds")
+
+        resp = curl_requests.get(
+            "https://www.china-airlines.com/tw/zh",
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                "Accept-Language": "zh-TW,zh;q=0.9",
+                "Referer": "https://www.google.com/",
+            },
+            impersonate="chrome120",
+            timeout=15
+        )
+        resp.raise_for_status()
+        html = resp.text
+
+        # 用跳脫過的 linkedData 區塊分隔
+        blocks = html.split('linkedData\\":{\\"$type\\":\\"Fields\\",\\"title\\":\\"')[1:]
+
+        results: List[Promotion] = []
+        seen: set = set()
+
+        for block in blocks:
+            title_match = re.match(r'^([^\\]*)\\\"', block)
+            title = title_match.group(1) if title_match else ""
+
+            # 排除非促銷區塊（網站地圖、服務項目等）
+            if not title or title in seen:
+                continue
+
+            img_match = re.search(r'\\"url\\":\\"([^\\]*?\.(?:png|jpg|jpeg|webp))\\"', block[:3000])
+            image = img_match.group(1) if img_match else ""
+
+            link_match = re.search(r'\\"externalLink\\":\\"([^\\]*)\\"', block[:3000])
+            link = link_match.group(1) if link_match else ""
+
+            # 沒有圖片就跳過（代表不是真正的 banner）
+            if not image:
+                continue
+
+            seen.add(title)
+
+            # 補齊圖片網址
+            image_url = image.replace("%20", " ")
+            if image_url.startswith("/"):
+                image_url = "https://prd-api.china-airlines.com" + image_url
+            image_url = image_url.replace(" ", "%20")
+
+            # 沒有外部連結就用首頁
+            if not link:
+                link = "https://www.china-airlines.com/tw/zh"
+
+            results.append(Promotion(
+                airline="中華航空",
+                title=title,
+                image_url=image_url,
+                origin="台北 (TPE)",
+                destination="請至官網確認",
+                url=link,
+                updated_at=now,
+            ))
+
+        logger.info(f"🎉 [ChinaAir] 成功抓取 {len(results)} 筆 Banner！")
+        return results
+
+    except Exception as e:
+        logger.error(f"❌ [ChinaAir] 抓取失敗: {e}", exc_info=True)
         return []

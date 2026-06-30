@@ -206,6 +206,7 @@ ${item.image_url
 
       try {
         const resp = await fetch('https://airplan-sale.onrender.com/api/promotions');
+        //const resp = await fetch('http://127.0.0.1:8000/api/promotions');
         const data = await resp.json();
 
         // 爬蟲失敗（API 回 502/500 並附錯誤 JSON）
