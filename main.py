@@ -9,6 +9,7 @@ from scrapers import (
     get_peach_promotions,
     get_tigerair_promotions,
     get_china_airlines,  # 新增
+    get_starlux_promotions,
     Promotion,
     ScrapingError,
 )
@@ -44,6 +45,11 @@ def list_promotions():
     # ── 中華航空 ──
     try:
         all_promotions.extend(get_china_airlines())
+    except Exception as e:
+        logger.error(f"[ChinaAir] 發生錯誤: {e}", exc_info=True)
+     # ── 星宇航空 ──
+    try:
+        all_promotions.extend(get_starlux_promotions())
     except Exception as e:
         logger.error(f"[ChinaAir] 發生錯誤: {e}", exc_info=True)
 
