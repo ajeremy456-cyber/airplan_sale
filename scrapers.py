@@ -206,23 +206,16 @@ def get_china_airlines() -> List[Promotion]:
         logger.info("🚀 [ChinaAir] 抓取首頁 Banner！")
         now = datetime.now().isoformat(timespec="seconds")
 
+        SCRAPER_API_KEY = "你的新KEY"  # ← 填入重新產生的 Key
         resp = curl_requests.get(
-            "https://www.china-airlines.com/tw/zh",
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-                "Accept-Language": "zh-TW,zh;q=0.9",
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-                "Accept-Encoding": "gzip, deflate, br",
-                "Referer": "https://www.google.com/",
-                "Sec-Fetch-Dest": "document",
-                "Sec-Fetch-Mode": "navigate",
-                "Sec-Fetch-Site": "none",
-                "Sec-Fetch-User": "?1",
-                "Upgrade-Insecure-Requests": "1",
-            },
-            impersonate="chrome120",
-            timeout=15
-        )
+            "https://api.scraperapi.com/",
+        params={
+            "api_key": SCRAPER_API_KEY,
+            "url": "https://www.china-airlines.com/tw/zh",
+            "country_code": "tw",
+        },
+        timeout=60  # ScraperAPI 比較慢，timeout 要拉長
+    )
         resp.raise_for_status()
         html = resp.text
 
