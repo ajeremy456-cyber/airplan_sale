@@ -206,7 +206,7 @@ def get_china_airlines() -> List[Promotion]:
         logger.info("🚀 [ChinaAir] 抓取首頁 Banner！")
         now = datetime.now().isoformat(timespec="seconds")
 
-        SCRAPER_API_KEY = "你的新KEY"  # ← 填入重新產生的 Key
+        SCRAPER_API_KEY = "7f2117c29185e08934e7e9a77c0facd1"  # ← 填入重新產生的 Key
         resp = curl_requests.get(
             "https://api.scraperapi.com/",
         params={
