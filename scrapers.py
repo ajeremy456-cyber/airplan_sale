@@ -340,17 +340,18 @@ def get_tway_promotions() -> List[Promotion]:
     """德威航空爬蟲 - 首頁促銷"""
     try:
         logger.info("🚀 [Tway] 抓取首頁促銷！")
-
+        now = datetime.now().isoformat(timespec="seconds")
+        #scraper是掛proxy才不會被鎖
+        SCRAPER_API_KEY = "7f2117c29185e08934e7e9a77c0facd1"  # ← 填入重新產生的 Key
         resp = curl_requests.get(
-            "https://www.twayair.com/app/main?regionCode=TW&langCode=zh-TW",
-            headers={
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-                "Referer": "https://www.google.com/",
-                "Accept-Language": "zh-TW,zh;q=0.9",
-            },
-            impersonate="chrome120",
-            timeout=15
-        )
+            "https://api.scraperapi.com/",
+        params={
+            "api_key": SCRAPER_API_KEY,
+            "url": "https://www.twayair.com/app/main?regionCode=TW&langCode=zh-TW",
+            "country_code": "tw",
+        },
+        timeout=60  # ScraperAPI 比較慢，timeout 要拉長
+    )
         resp.raise_for_status()
         html = resp.text
 
