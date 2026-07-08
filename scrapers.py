@@ -336,3 +336,65 @@ def get_starlux_promotions() -> List[Promotion]:
     except Exception as e:
         logger.error(f"❌ [Starlux] 抓取失敗: {e}", exc_info=True)
         return []
+def get_tway_promotions() -> List[Promotion]:
+    """德威航空爬蟲 - 首頁促銷"""
+    try:
+        logger.info("🚀 [Tway] 抓取首頁促銷！")
+
+        resp = curl_requests.get(
+            "https://www.twayair.com/app/main?regionCode=TW&langCode=zh-TW",
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                "Referer": "https://www.google.com/",
+                "Accept-Language": "zh-TW,zh;q=0.9",
+            },
+            impersonate="chrome120",
+            timeout=15
+        )
+        resp.raise_for_status()
+        html = resp.text
+
+        blocks = html.split('data-webUrl="')[1:]
+        now = datetime.now().isoformat(timespec="seconds")
+        results: List[Promotion] = []
+        seen: set = set()
+
+        for block in blocks:
+            link_match = re.match(r'^([^"]*)"', block)
+            link = link_match.group(1) if link_match else ""
+
+            t1_match = re.search(r'data-copyTextMain01="([^"]*)"', block[:500])
+            title1 = t1_match.group(1) if t1_match else ""
+
+            t2_match = re.search(r'data-copyTextMain02="([^"]*)"', block[:500])
+            title2 = t2_match.group(1) if t2_match else ""
+
+            title = f"{title1} {title2}".strip()
+
+            idx = html.find('data-webUrl="' + link)
+            img_match = re.search(
+                r'url\(["\']?(https://contents-image\.twayair\.com/[^"\')\s]+)["\']?\)',
+                html[max(0, idx-500):idx]
+            )
+            image = img_match.group(1) if img_match else ""
+
+            if not link or not title or link in seen:
+                continue
+            seen.add(link)
+
+            results.append(Promotion(
+                airline="德威航空",
+                title=title,
+                image_url=image,
+                origin="台北 (TPE)",
+                destination="請至官網確認",
+                url=link,
+                updated_at=now,
+            ))
+
+        logger.info(f"🎉 [Tway] 成功抓取 {len(results)} 筆促銷！")
+        return results
+
+    except Exception as e:
+        logger.error(f"❌ [Tway] 抓取失敗: {e}", exc_info=True)
+        return []

@@ -10,6 +10,7 @@ from scrapers import (
     get_tigerair_promotions,
     get_china_airlines,  # 新增
     get_starlux_promotions,
+    get_tway_promotions,
     Promotion,
     ScrapingError,
 )
@@ -52,9 +53,13 @@ def list_promotions():
         all_promotions.extend(get_starlux_promotions())
     except Exception as e:
         logger.error(f"[ChinaAir] 發生錯誤: {e}", exc_info=True)
-
+     # ── 德威航空 ──
+    try:
+        all_promotions.extend(get_tway_promotions())
+    except Exception as e:
+        logger.error(f"[ChinaAir] 發生錯誤: {e}", exc_info=True)
     # ── 關鍵字篩選 ──
-    allowed_keywords = ["促銷", "販售", "優惠", "特價", "限時", "台北", "高雄", "→", "起"]
+    allowed_keywords = ["促銷", "販售", "優惠", "特價", "限時", "台北", "高雄", "→", "起","早鳥"]
     filtered_promotions = [
         p for p in all_promotions
         if any(kw in p.title for kw in allowed_keywords)
