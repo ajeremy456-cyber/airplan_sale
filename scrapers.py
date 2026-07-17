@@ -302,8 +302,11 @@ def get_starlux_promotions() -> List[Promotion]:
             title_match = re.match(r'^([^"]*)"', block)
             title = title_match.group(1) if title_match else ""
 
-            link_match = re.search(r'Url:"(https:\\u002F\\u002F[^"]*)"', block[:1000])
-            link = link_match.group(1).replace("\\u002F", "/") if link_match else ""
+            link_match = re.search(r'Url:"(https:\\u002F\\u002F[^"]*)"', block[:1500])
+            if link_match:
+                link = link_match.group(1).replace("\\u002F", "/")
+            else:
+                link = "https://www.starlux-airlines.com/zh-TW"
 
             img_match = re.search(r'Url:"(\\u002Fzh-TW\\u002FImages\\u002F[^"]*)"', block[:1000])
             image = "https://webassets2.starlux-airlines.com" + img_match.group(1).replace("\\u002F", "/") if img_match else ""
